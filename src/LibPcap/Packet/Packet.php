@@ -32,10 +32,10 @@ class Packet
     protected $protocols;
 
     protected $_protocols=array(
-        "1"=>"Ethernet",
-        "2"=>"Ip",
-        "3"=>array("Tcp","Udp"),
-        "4"=>array("Dhcp","Http")
+        "Ethernet",
+        "Ip",
+        array("Tcp","Udp"),
+        array("Dhcp","Http")
     );
     public $defaultProtocolNamespace = "\\LibPcap\\Packet\\Protocols\\";
 
@@ -43,7 +43,7 @@ class Packet
     {
         $this->encoding=$encoding;
         $this->buffer=$buffer;
-        $this->headData=$buffer->get(16);
+        $this->headData=$buffer->get(16); #head data is 16 bytes
         $this->_attributes=array();
         $this->isMalphormed=true;
 
@@ -123,51 +123,39 @@ class Packet
 
         $head = $this->getHead();
         $head["data"] = $buffer->get($head['incl_len']);
+        $this->setHead($head);
+        //propagate the decoding to the different layers in the tcp layer
         foreach($this->_protocols as $tcpLayer => $protocols)
         {
+
+          $head = $this->getHead();
           if(is_array($protocols))
           {
-              foreach($protocols as $p)
+              foreach($protocols as $protocolName)
               {
-                $protocol = $this->decodeProtocol($p,$head);
+                $protocol = $this->decodeProtocol($protocolName,$head);
                 $head = $protocol->getAttributes();
 
                 if($protocol->isValid())
-                  $this->protocols["$tcpLayer"] = $protocol;
+                  $this->protocols[$tcpLayer] = $protocol;
               }
           }
           else
           {
-            $protocol = $this->decodeProtocol($protocols);
-            $head = $protocol->getAttributes();
+            $protocolName = $protocols;
+            $protocol = $this->decodeProtocol($protocolName);
+            $head = $protocol->getAttributes();//we reassign the head data to allow decoding of more in depth protocols
 
             if($protocol->isValid())
-              $this->protocols["$tcpLayer"] = $protocol;
+              $this->protocols[$tcpLayer] = $protocol;
           }
-          if(!isset($this->protocols["$tcpLayer"])){
-            $this->protocols["$tcpLayer"] = $this->decodeProtocol("NoProtocol");
+            //we may not have decoded any protocol, so we just
+          if(!isset($this->protocols[$tcpLayer])){
+            $this->protocols[$tcpLayer] = $this->decodeProtocol("NoProtocol");
           }
+          $this->setHead($head);
         }
         return $this;
-
-        /*
-        $ethernetFrame = $this->decodeEthernetFrame($data);//parse the Ethernet frame first
-        if($this->isMalphormed)
-          return $this;
-        $ipFrame = $this->decodeIpFrame($ethernetFrame["data"]);//parse the Ip frame
-        if($this->isMalphormed)
-          return $this;
-        $protocol = $this->decodeProtocol(array_merge($ethernetFrame,$ipFrame));//parse the protocol
-        //remove the data from the top to the bottom of the OSI stack
-        unset($head["data"]);
-        unset($ethernetFrame["data"]);
-        if($protocol!==null)
-            unset($ipFrame["data"]);
-
-
-        $this->fillDirty(compact("head","protocol","ethernetFrame","ipFrame"));
-
-        return $this;*/
     }
     protected function decodeHeadFromPacket($data)
     {
@@ -187,7 +175,18 @@ class Packet
         $this->isMalphormed=false;
         return $head;
     }
-    protected function decodeIpFrame($data)
+
+  /**
+   * @param array $head
+   * @return Packet
+   */
+  public function setHead($head)
+  {
+    $this->head = $head;
+    return $this;
+  }
+
+  protected function decodeIpFrame($data)
     {
         $x = unpack("Cversion_ihl/Cservices/nlength/nidentification/nflags_offset/Cttl/Cprotocol/nchecksum/Nsource/Ndestination", $data);
         $x['version'] = $x['version_ihl'] >> 4;
@@ -208,34 +207,15 @@ class Packet
           $protocol = new $cls($data,$this->getEncoding());
       }
       elseif(class_exists($protocolClass))
-          $protocol = new $protocol($data,$this->getEncoding());
+          $protocol = new $protocolClass($data,$this->getEncoding());
       else
         throw new \Exception("The class {$protocolClass} couldn't be found");
-      $res = $protocol->decode();
 
+      $res = $protocol->decode();
+      $protocol->setValid($res);
 
       return $protocol;
-      /*
-        $protocol = null;//instanciate the protocol for the packet
-        foreach($this->_protocols as $level => $protocols)
-        {
-            foreach($protocols as $p)
-            {
-                if(class_exists($this->defaultProtocolNamespace.$p)){
-                    $cls = $this->defaultProtocolNamespace.$p;
-                    $protocol = new $cls($data);
-                }
-                elseif(class_exists($p))
-                    $protocol = new $p($data);
-                else
-                  throw new \Exception("The class {$p} couldn't be found");
-                $res = $protocol->decode();
-                if($res!==null)
-                    $data = $res->getPayload();
-            }
-        }
-        $this->isMalphormed=false;
-        return $protocol;*/
+
     }
     protected function decodeEthernetFrame($data)
     {

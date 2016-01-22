@@ -11,7 +11,7 @@ namespace LibPcap\Packet\Protocols;
 
 class Ethernet extends Protocol
 {
-    protected $protocolName = "udp";
+    protected $protocolName = "ethernet";
     public function encode()
     {
 
@@ -20,12 +20,14 @@ class Ethernet extends Protocol
     {
       $data = $this->getRawData();
       $x = @unpack("nethertype", substr($data,12,2));
+      if( !isset($x["ethertype"]) )
+        return false;
+
       $x['destination_mac'] = bin2hex(substr($data,0,6));
       $x['source_mac'] = bin2hex(substr($data,6,6));
       $x['data'] = substr($data,14);
       $this->fill($x);
       $this->setRawData($x["data"]);
-      $this->setValid(true);
       return true;
     }
 }

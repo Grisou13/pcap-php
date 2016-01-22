@@ -11,7 +11,7 @@ namespace LibPcap\Packet\Protocols;
 
 class Ip extends Protocol
 {
-    protected $protocolName = "udp";
+    protected $protocolName = "ip";
     public function encode()
     {
 
@@ -21,6 +21,8 @@ class Ip extends Protocol
       $data = $this->getRawData();
 
       $x = @unpack("Cversion_ihl/Cservices/nlength/nidentification/nflags_offset/Cttl/Cprotocol/nchecksum/Nsource/Ndestination", $data);
+      if( !isset($x["version_ihl"]) )
+        return false;
 
       $x['version'] = $x['version_ihl'] >> 4;
       $x['ihl'] = $x['version_ihl'] & 0xf;
@@ -32,7 +34,6 @@ class Ip extends Protocol
       $x['data'] = substr($data,$x['ihl']*4,$x['length']-$x['ihl']*4); // ignoring options
       $this->fill($x);
       $this->setRawData($x["data"]);
-      $this->setValid(true);
-        return true;
+      return true;
     }
 }

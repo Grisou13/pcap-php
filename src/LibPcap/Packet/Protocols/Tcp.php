@@ -20,8 +20,10 @@ class Tcp extends Protocol
     {
         $d = $this->getHeadData();
 
-        if(!$d["protocol"]!==6)
-            return false;
+        if( !isset($d["protocol"]) )
+          return false;
+
+
 
         $x = @unpack(
         "nsource_port".
@@ -34,6 +36,8 @@ class Tcp extends Protocol
         "/nchecksum".
         "/nurgent"
         , $this->getRawData());
+        if( !isset($x["tmp1"]) )//if we don't have this in our array of data, we can consider that we cannot decode this packet as TCP
+            return false;
 
         $x['offset'] = ($x['tmp1']>>4)&0xf;
         $x['flag_NS'] = ($x['tmp1']&0x01) != 0;
@@ -50,7 +54,6 @@ class Tcp extends Protocol
         $x['data'] = substr($d["data"], 4*$x['offset']);
         $this->fill($x);
         $this->setRawData($x["data"]);//resets the raw data
-        $this->setValid(true);
         return true;
     }
 }

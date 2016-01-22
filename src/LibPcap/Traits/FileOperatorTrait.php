@@ -28,7 +28,7 @@ trait FileOperatorTrait
     public function open($filepath)
     {
       if(!file_exists($filepath))
-        throw new Exception("The file $filepath is not valid");
+        throw new \Exception("The file $filepath is not valid");
 
       $this->_file=new Pcap($filepath);
       return $this;

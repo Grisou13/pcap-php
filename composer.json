@@ -1,0 +1,16 @@
+{
+    "name": "grisou13/php-libpcap",
+    "description": "A compact reader/writer for tcpdumps",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Thomas Ricci",
+            "email": "grisou13@hotmail.fr"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {},
+    "autoload":{
+      "psr-4":{"LibPcap\\":"src/LibPcap/"}
+    }
+}
