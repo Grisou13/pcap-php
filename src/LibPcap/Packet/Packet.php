@@ -93,22 +93,22 @@ class Packet
     }
     public function getEthernet()
     {
-      return $this->protocols["1"];
+      return $this->protocols[1];
     }
     public function getIp()
     {
-      return $this->protocols["2"];
+      return $this->protocols[2];
     }
     public function getTransport()
     {
-        return $this->protocols["3"];
+        return $this->protocols[3];
     }
     public function getProtocol()
     {
-        if(isset($this->protocols["4"]) && !$this->protocols["4"] instanceof NoProtocol)
-            return $this->protocols["4"];
+        if(isset($this->protocols[4]) && !$this->protocols[4] instanceof NoProtocol)
+            return $this->protocols[4];
         else
-            return $this->protocols["3"];
+            return $this->protocols[3];
     }
     public function getEncoding()
     {
